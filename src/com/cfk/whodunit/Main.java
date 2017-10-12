@@ -145,6 +145,14 @@ public class Main {
 
     }
 
+    private final class Killer extends NPCharacter {
+
+    }
+
+    private final class Innocent extends NPCharacter {
+
+    }
+
     private interface ClueDropper {
         com.cfk.Main.Clue getClue();
     }
