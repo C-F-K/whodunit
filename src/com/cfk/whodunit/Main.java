@@ -3,16 +3,16 @@ package com.cfk.whodunit;
 import java.util.*;
 
 public class Main {
-    private static HashMap<String, com.cfk.whodunit.Main.Command> allowedCmds = new HashMap<String, com.cfk.whodunit.Main.Command>(){{
-//	    this.put("check", new Check());
-        this.put("examine", new com.cfk.whodunit.Main.Examine());
-        this.put("exit", new com.cfk.whodunit.Main.Exit());
-        this.put("generate", new com.cfk.whodunit.Main.Generate());
-        this.put("help", new com.cfk.whodunit.Main.Help());
-        this.put("list", new com.cfk.whodunit.Main.ListAssets());
+    private static HashMap<String,Command> allowedCmds = new HashMap<String,Command>(){{
+        this.put("examine", new Examine());
+        this.put("exit", new Exit());
+        this.put("generate", new Generate());
+        this.put("help", new Help());
+        this.put("list", new ListAssets());
+        this.put("search", new Search());
     }};
 
-    private static com.cfk.whodunit.Main.CrimeScene scene;
+    private static CrimeScene scene;
 
     public static void main(String[] args) {
         Scanner s = new Scanner(System.in);
@@ -34,22 +34,21 @@ public class Main {
         String getHelpText();
     }
 
-    private static class Examine implements com.cfk.whodunit.Main.Command {
+    private static class Examine implements Command {
         @Override
         public void doCommand(String... params) {
-            if (scene != null) {
-                //scene.getAllClues();
-            } else {
+            if (scene == null) {
                 System.out.println("No CrimeScene; do 'generate' first");
+                return;
             }
         }
         @Override
         public String getHelpText() {
-            return "Examine the room for possible clues";
+            return "Examine a clue";
         }
     }
 
-    private static class Exit implements com.cfk.whodunit.Main.Command {
+    private static class Exit implements Command {
         @Override
         public void doCommand(String... params) {
             System.exit(0);
@@ -60,7 +59,7 @@ public class Main {
         }
     }
 
-    private static class Generate implements com.cfk.whodunit.Main.Command {
+    private static class Generate implements Command {
         @Override
         public void doCommand(String... params) {
 
@@ -71,7 +70,7 @@ public class Main {
         }
     }
 
-    private static class Help implements com.cfk.whodunit.Main.Command {
+    private static class Help implements Command {
         @Override
         public void doCommand(String... params) {
             for (String s : allowedCmds.keySet()) {
@@ -84,7 +83,7 @@ public class Main {
         }
     }
 
-    private static class ListAssets implements com.cfk.whodunit.Main.Command {
+    private static class ListAssets implements Command {
         @Override
         public void doCommand(String... params) {
             if (scene == null) {
@@ -99,9 +98,14 @@ public class Main {
                 case "suspects":
                     break;
                 case "clues":
-                    for (Object clue : scene.getAllClues().stream().filter(com.cfk.whodunit.Main.Clue::isFound).toArray()) {
-                        com.cfk.whodunit.Main.Clue c = (com.cfk.whodunit.Main.Clue) clue;
-                        System.out.println(c.getDescription());
+//					for (Object clue : scene.getAllClues().stream().filter(Clue::isFound).toArray()) {
+//						Clue c = (Clue) clue;
+//						System.out.println(c.getDescription());
+//					}
+                    for (Clue clue : scene.getAllClues()) {
+                        if (clue.isFound()) {
+                            System.out.println(clue.getDescription());
+                        }
                     }
                     break;
                 default:
@@ -114,22 +118,62 @@ public class Main {
         }
     }
 
-    private static class CrimeScene {
-        private ArrayList<com.cfk.whodunit.Main.Clue> allClues;
-        public ArrayList<com.cfk.whodunit.Main.Clue> getAllClues() {
+    private static class Search implements Command {
+        @Override
+        public void doCommand(String... params) {
+            if (scene == null) {
+                System.out.println("No CrimeScene; do 'generate' first");
+                return;
+            }
+            if (params.length == 0) {
+                System.out.println("Needs additional parameter - Search check result");
+                return;
+            }
+            int result;
+            try {
+                result = Integer.parseInt(params[0]);
+            } catch (NumberFormatException e) {
+                System.out.println("Search check result not formatted correctly - needs whole number");
+                return;
+            }
+            boolean foundClues = false;
+            for (Clue clue : scene.getAllClues()) {
+                if (result >= clue.getCheckDC()) {
+                    if (!foundClues) {
+                        foundClues = true;
+                    }
+                    clue.setFound(true);
+                    System.out.println("Found new clue: " + clue.getDescription());
+                }
+            }
+            if (!foundClues) {
+                System.out.println("No new clues found");
+            }
+        }
+        @Override
+        public String getHelpText() {
+            return "Search the scene for new clues";
+        }
+    }
+
+    private class CrimeScene {
+        private ArrayList<Clue> allClues;
+        public ArrayList<Clue> getAllClues() {
             return allClues;
         }
-        public void setAllClues(ArrayList<com.cfk.whodunit.Main.Clue> allClues) {
+        public void setAllClues(ArrayList<Clue> allClues) {
             this.allClues = allClues;
         }
     }
 
-    private static class Clue {
+    private class Clue {
         private boolean found = false;
         private final String description;
+        private final int checkDC;
 
-        public Clue(String desc) {
+        public Clue(String desc, int checkDC) {
             this.description = desc;
+            this.checkDC = checkDC;
         }
         public boolean isFound() {
             return found;
@@ -140,40 +184,44 @@ public class Main {
         public String getDescription() {
             return description;
         }
+        public int getCheckDC() {
+            return checkDC;
+        }
     }
 
     private class NPCharacter {
 
     }
 
-    private final class Killer extends com.cfk.whodunit.Main.NPCharacter {
+    private final class Killer extends NPCharacter {
 
     }
 
-    private final class Innocent extends com.cfk.whodunit.Main.NPCharacter {
+    private final class Innocent extends NPCharacter {
 
     }
+
     private interface ClueDropper {
-        com.cfk.whodunit.Main.Clue getClue();
+        Clue getClue();
     }
 
-    private enum Race implements com.cfk.whodunit.Main.ClueDropper {
+    private enum Race implements ClueDropper {
         HUMAN, HALFLING, ORC, ELF;
     }
 
-    private enum Age implements com.cfk.whodunit.Main.ClueDropper {
+    private enum Age implements ClueDropper {
 
     }
 
-    private enum SocialClass implements com.cfk.whodunit.Main.ClueDropper {
+    private enum SocialClass implements ClueDropper {
 
     }
 
-    private enum Occupation implements com.cfk.whodunit.Main.ClueDropper {
+    private enum Occupation implements ClueDropper {
 
     }
 
-    private enum Quirk implements com.cfk.whodunit.Main.ClueDropper {
+    private enum Quirk implements ClueDropper {
 
     }
 }
@@ -201,7 +249,7 @@ public class Main {
  *  procedurally generate the above
  *     enum for each property, get random option
  *
- *  select one character
+ *  select one character (actually: generate one killer and several innocents)
  *      select n properties to leave clues
  *      generate clues
  *
@@ -213,6 +261,9 @@ public class Main {
  *
  *  add clues to room
  *  add other random clues to room
+ *      avoid: being able to brute force which is the killer
+ *          because some clues don't refer to anyone
+ *          and all the ones that do refer to the killer
  *
  *  nice to have:
  *      diff clues need diff skills to find
