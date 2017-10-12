@@ -3,24 +3,25 @@ package com.cfk;
 import java.util.*;
 
 public class Main {
+    private static HashMap<String, com.cfk.Main.Command> allowedCmds = new HashMap<String, com.cfk.Main.Command>(){{
+//	    this.put("check", new Check());
+        this.put("examine", new com.cfk.Main.Examine());
+        this.put("exit", new com.cfk.Main.Exit());
+        this.put("generate", new com.cfk.Main.Generate());
+        this.put("help", new com.cfk.Main.Help());
+        this.put("list", new com.cfk.Main.ListAssets());
+    }};
+
     private static com.cfk.Main.CrimeScene scene;
 
     public static void main(String[] args) {
-        boolean run = true;
         Scanner s = new Scanner(System.in);
-        String in;
         String cmd;
         String[] params;
-        HashMap<String, com.cfk.Main.Command> allowedCmds = new HashMap<String, com.cfk.Main.Command>(){{
-            this.put("examine", new com.cfk.Main.Examine());
-            this.put("exit", new com.cfk.Main.Exit());
-            this.put("generate", new com.cfk.Main.Generate());
-        }};
 
-        while(run) {
+        while(true) {
             System.out.print("> ");
-            in = s.nextLine();
-            params = in.split(" ");
+            params = s.nextLine().toLowerCase().split(" ");
             cmd = params[0];
             if (allowedCmds.containsKey(cmd)) {
                 allowedCmds.get(cmd).doCommand(Arrays.copyOfRange(params,1,params.length));
@@ -30,6 +31,7 @@ public class Main {
 
     private interface Command {
         void doCommand(String... params);
+        String getHelpText();
     }
 
     private static class Examine implements com.cfk.Main.Command {
@@ -38,8 +40,12 @@ public class Main {
             if (scene != null) {
                 //scene.getAllClues();
             } else {
-                System.out.println("No CrimeScene; do 'generate' before examining");
+                System.out.println("No CrimeScene; do 'generate' first");
             }
+        }
+        @Override
+        public String getHelpText() {
+            return "Examine the room for possible clues";
         }
     }
 
@@ -48,6 +54,10 @@ public class Main {
         public void doCommand(String... params) {
             System.exit(0);
         }
+        @Override
+        public String getHelpText() {
+            return "Exit to command line";
+        }
     }
 
     private static class Generate implements com.cfk.Main.Command {
@@ -55,9 +65,55 @@ public class Main {
         public void doCommand(String... params) {
 
         }
+        @Override
+        public String getHelpText() {
+            return "Generate a new crime scene";
+        }
     }
 
-    private class CrimeScene {
+    private static class Help implements com.cfk.Main.Command {
+        @Override
+        public void doCommand(String... params) {
+            for (String s : allowedCmds.keySet()) {
+                System.out.println(s + " - " + allowedCmds.get(s).getHelpText());
+            }
+        }
+        @Override
+        public String getHelpText() {
+            return "Display this text";
+        }
+    }
+
+    private static class ListAssets implements com.cfk.Main.Command {
+        @Override
+        public void doCommand(String... params) {
+            if (scene == null) {
+                System.out.println("No CrimeScene; do 'generate' first");
+            }
+            if (params.length == 0) {
+                System.out.println("Needs additional parameter - 'suspects' or 'clues'");
+                return;
+            }
+            switch (params[0]) {
+                case "suspects":
+                    break;
+                case "clues":
+                    for (Object clue : scene.getAllClues().stream().filter(com.cfk.Main.Clue::isFound).toArray()) {
+                        com.cfk.Main.Clue c = (com.cfk.Main.Clue) clue;
+                        System.out.println(c.getDescription());
+                    }
+                    break;
+                default:
+                    System.out.println("Asset type unrecognized");
+            }
+        }
+        @Override
+        public String getHelpText() {
+            return "List assets (suspects or found clues)";
+        }
+    }
+
+    private static class CrimeScene {
         private ArrayList<com.cfk.Main.Clue> allClues;
         public ArrayList<com.cfk.Main.Clue> getAllClues() {
             return allClues;
@@ -67,8 +123,22 @@ public class Main {
         }
     }
 
-    private class Clue {
+    private static class Clue {
+        private boolean found = false;
+        private final String description;
 
+        public Clue(String desc) {
+            this.description = desc;
+        }
+        public boolean isFound() {
+            return found;
+        }
+        public void setFound(boolean found) {
+            this.found = found;
+        }
+        public String getDescription() {
+            return description;
+        }
     }
 
     private class NPCharacter {
