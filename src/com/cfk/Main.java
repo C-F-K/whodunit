@@ -1,15 +1,101 @@
 package com.cfk;
 
-import java.util.Random;
-
+import java.util.*;
 
 public class Main {
+    private static com.cfk.Main.CrimeScene scene;
 
     public static void main(String[] args) {
-	// write your code here
+        boolean run = true;
+        Scanner s = new Scanner(System.in);
+        String in;
+        String cmd;
+        String[] params;
+        HashMap<String, com.cfk.Main.Command> allowedCmds = new HashMap<String, com.cfk.Main.Command>(){{
+            this.put("examine", new com.cfk.Main.Examine());
+            this.put("exit", new com.cfk.Main.Exit());
+            this.put("generate", new com.cfk.Main.Generate());
+        }};
+
+        while(run) {
+            System.out.print("> ");
+            in = s.nextLine();
+            params = in.split(" ");
+            cmd = params[0];
+            if (allowedCmds.containsKey(cmd)) {
+                allowedCmds.get(cmd).doCommand(Arrays.copyOfRange(params,1,params.length));
+            }
+        }
+    }
+
+    private interface Command {
+        void doCommand(String... params);
+    }
+
+    private static class Examine implements com.cfk.Main.Command {
+        @Override
+        public void doCommand(String... params) {
+            if (scene != null) {
+                //scene.getAllClues();
+            } else {
+                System.out.println("No CrimeScene; do 'generate' before examining");
+            }
+        }
+    }
+
+    private static class Exit implements com.cfk.Main.Command {
+        @Override
+        public void doCommand(String... params) {
+            System.exit(0);
+        }
+    }
+
+    private static class Generate implements com.cfk.Main.Command {
+        @Override
+        public void doCommand(String... params) {
+
+        }
+    }
+
+    private class CrimeScene {
+        private ArrayList<com.cfk.Main.Clue> allClues;
+        public ArrayList<com.cfk.Main.Clue> getAllClues() {
+            return allClues;
+        }
+        public void setAllClues(ArrayList<com.cfk.Main.Clue> allClues) {
+            this.allClues = allClues;
+        }
+    }
+
+    private class Clue {
+
     }
 
     private class NPCharacter {
+
+    }
+
+    private interface ClueDropper {
+        com.cfk.Main.Clue getClue();
+    }
+
+    private enum Race {
+        HUMAN, HALFLING, ORC, ELF;
+    }
+
+    private enum Age {
+
+    }
+
+    private enum SocialClass {
+
+    }
+
+    private enum Occupation {
+
+    }
+
+    private enum Quirk {
 
     }
 }
