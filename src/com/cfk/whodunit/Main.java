@@ -1,18 +1,18 @@
-package com.cfk;
+package com.cfk.whodunit;
 
 import java.util.*;
 
 public class Main {
-    private static HashMap<String, com.cfk.Main.Command> allowedCmds = new HashMap<String, com.cfk.Main.Command>(){{
+    private static HashMap<String, com.cfk.whodunit.Main.Command> allowedCmds = new HashMap<String, com.cfk.whodunit.Main.Command>(){{
 //	    this.put("check", new Check());
-        this.put("examine", new com.cfk.Main.Examine());
-        this.put("exit", new com.cfk.Main.Exit());
-        this.put("generate", new com.cfk.Main.Generate());
-        this.put("help", new com.cfk.Main.Help());
-        this.put("list", new com.cfk.Main.ListAssets());
+        this.put("examine", new com.cfk.whodunit.Main.Examine());
+        this.put("exit", new com.cfk.whodunit.Main.Exit());
+        this.put("generate", new com.cfk.whodunit.Main.Generate());
+        this.put("help", new com.cfk.whodunit.Main.Help());
+        this.put("list", new com.cfk.whodunit.Main.ListAssets());
     }};
 
-    private static com.cfk.Main.CrimeScene scene;
+    private static com.cfk.whodunit.Main.CrimeScene scene;
 
     public static void main(String[] args) {
         Scanner s = new Scanner(System.in);
@@ -34,7 +34,7 @@ public class Main {
         String getHelpText();
     }
 
-    private static class Examine implements com.cfk.Main.Command {
+    private static class Examine implements com.cfk.whodunit.Main.Command {
         @Override
         public void doCommand(String... params) {
             if (scene != null) {
@@ -49,7 +49,7 @@ public class Main {
         }
     }
 
-    private static class Exit implements com.cfk.Main.Command {
+    private static class Exit implements com.cfk.whodunit.Main.Command {
         @Override
         public void doCommand(String... params) {
             System.exit(0);
@@ -60,7 +60,7 @@ public class Main {
         }
     }
 
-    private static class Generate implements com.cfk.Main.Command {
+    private static class Generate implements com.cfk.whodunit.Main.Command {
         @Override
         public void doCommand(String... params) {
 
@@ -71,7 +71,7 @@ public class Main {
         }
     }
 
-    private static class Help implements com.cfk.Main.Command {
+    private static class Help implements com.cfk.whodunit.Main.Command {
         @Override
         public void doCommand(String... params) {
             for (String s : allowedCmds.keySet()) {
@@ -84,11 +84,12 @@ public class Main {
         }
     }
 
-    private static class ListAssets implements com.cfk.Main.Command {
+    private static class ListAssets implements com.cfk.whodunit.Main.Command {
         @Override
         public void doCommand(String... params) {
             if (scene == null) {
                 System.out.println("No CrimeScene; do 'generate' first");
+                return;
             }
             if (params.length == 0) {
                 System.out.println("Needs additional parameter - 'suspects' or 'clues'");
@@ -98,8 +99,8 @@ public class Main {
                 case "suspects":
                     break;
                 case "clues":
-                    for (Object clue : scene.getAllClues().stream().filter(com.cfk.Main.Clue::isFound).toArray()) {
-                        com.cfk.Main.Clue c = (com.cfk.Main.Clue) clue;
+                    for (Object clue : scene.getAllClues().stream().filter(com.cfk.whodunit.Main.Clue::isFound).toArray()) {
+                        com.cfk.whodunit.Main.Clue c = (com.cfk.whodunit.Main.Clue) clue;
                         System.out.println(c.getDescription());
                     }
                     break;
@@ -114,11 +115,11 @@ public class Main {
     }
 
     private static class CrimeScene {
-        private ArrayList<com.cfk.Main.Clue> allClues;
-        public ArrayList<com.cfk.Main.Clue> getAllClues() {
+        private ArrayList<com.cfk.whodunit.Main.Clue> allClues;
+        public ArrayList<com.cfk.whodunit.Main.Clue> getAllClues() {
             return allClues;
         }
-        public void setAllClues(ArrayList<com.cfk.Main.Clue> allClues) {
+        public void setAllClues(ArrayList<com.cfk.whodunit.Main.Clue> allClues) {
             this.allClues = allClues;
         }
     }
@@ -145,35 +146,34 @@ public class Main {
 
     }
 
-    private final class Killer extends NPCharacter {
+    private final class Killer extends com.cfk.whodunit.Main.NPCharacter {
 
     }
 
-    private final class Innocent extends NPCharacter {
+    private final class Innocent extends com.cfk.whodunit.Main.NPCharacter {
 
     }
-
     private interface ClueDropper {
-        com.cfk.Main.Clue getClue();
+        com.cfk.whodunit.Main.Clue getClue();
     }
 
-    private enum Race {
+    private enum Race implements com.cfk.whodunit.Main.ClueDropper {
         HUMAN, HALFLING, ORC, ELF;
     }
 
-    private enum Age {
+    private enum Age implements com.cfk.whodunit.Main.ClueDropper {
 
     }
 
-    private enum SocialClass {
+    private enum SocialClass implements com.cfk.whodunit.Main.ClueDropper {
 
     }
 
-    private enum Occupation {
+    private enum Occupation implements com.cfk.whodunit.Main.ClueDropper {
 
     }
 
-    private enum Quirk {
+    private enum Quirk implements com.cfk.whodunit.Main.ClueDropper {
 
     }
 }
@@ -400,7 +400,7 @@ Profession: Underworld: Pirate
 Profession: Underworld: Robber (Bandit, Armed Robber)
 Profession: Underworld: Thug (Organized crime - Protection money, Gambling, etc)
 
- */
+*/
 
 /* Quirks 1-100
 
