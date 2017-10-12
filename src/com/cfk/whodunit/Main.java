@@ -3,6 +3,8 @@ package com.cfk.whodunit;
 import java.util.*;
 
 public class Main {
+    private final Random rng = new Random(System.currentTimeMillis());
+
     private static HashMap<String,Command> allowedCmds = new HashMap<String,Command>(){{
         this.put("examine", new Examine());
         this.put("exit", new Exit());
@@ -189,6 +191,67 @@ public class Main {
         }
     }
 
+    private class Corpse {
+        private final TimeOfDeath tod;
+        private final MurderMethod method;
+
+        public Corpse() {
+            this.tod = TimeOfDeath.values()[rng.nextInt(TimeOfDeath.values().length)];
+            this.method = MurderMethod.values()[rng.nextInt(MurderMethod.values().length)];
+        }
+        public TimeOfDeath getTod() {
+            return tod;
+        }
+        public MurderMethod getMethod() {
+            return method;
+        }
+    }
+
+    private enum TimeOfDeath {
+        EARLY_MORNING, LATE_MORNING,
+        EARLY_AFTERNOON, LATE_AFTERNOON,
+        EARLY_EVENING, LATE_EVENING,
+        EARLY_NIGHT, LATE_NIGHT;
+    }
+
+    private enum MurderMethod {
+        STAB(false,false,"the victim has several deep stab wounds"),
+        SLASH(false,false,"the victim has several lacerations and has lost a lot of blood"),
+        CRUSH(false,false,"the victim has many contusions and broken bones"),
+        POISON(false,false,"the victim died clutching their gut, wearing an agonized expression"),
+        BURN(true,true,"the victim has severe burns and charred skin"),
+        SHOCK(true,true,"the victim has burst many small blood vessels and has minor burns"),
+        MELT(true,true,"the victim has severe burns, surrounded by bubbled and melted flesh"),
+        FREEZE(true,true,"the victim has pale, rigid, cracked skin, and is particularly cold to the touch"),
+        EVOCATION(true,false, "a dim aura of evocation still surrounds the victim"),
+        CONJURATION(true,false,"a dim aura of conjuration still surrounds the victim"),
+        NECROMANCY(true,false,"a dim aura of necromancy still surrounds the victim"),
+        ILLUSION(true,false,"a dim aura of illusion still surrounds the victim");
+        
+        final boolean isMagic;
+        final boolean isElemental;
+        final String description;
+        MurderMethod(boolean isMagic, boolean isElemental, String description) {
+            this.isMagic = isMagic;
+            this.isElemental = isElemental;
+            this.description = description;
+        }
+        public boolean isMagic() {
+            return isMagic;
+        }
+        public boolean isElemental() {
+            return isElemental;
+        }
+        @Override
+        public String toString() {
+            return description;
+        }
+    }
+
+    private class MurderWeapon {
+
+    }
+
     private class NPCharacter {
 
     }
@@ -201,27 +264,23 @@ public class Main {
 
     }
 
-    private interface ClueDropper {
-        Clue getClue();
-    }
-
-    private enum Race implements ClueDropper {
+    private enum Race {
         HUMAN, HALFLING, ORC, ELF;
     }
 
-    private enum Age implements ClueDropper {
+    private enum Age {
 
     }
 
-    private enum SocialClass implements ClueDropper {
+    private enum SocialClass {
 
     }
 
-    private enum Occupation implements ClueDropper {
+    private enum Occupation {
 
     }
 
-    private enum Quirk implements ClueDropper {
+    private enum Quirk {
 
     }
 }
