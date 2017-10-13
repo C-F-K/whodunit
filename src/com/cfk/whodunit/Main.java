@@ -3,7 +3,7 @@ package com.cfk.whodunit;
 import java.util.*;
 
 public class Main {
-    private final Random rng = new Random(System.currentTimeMillis());
+    private static final Random rng = new Random(System.currentTimeMillis());
 
     private static HashMap<String,Command> allowedCmds = new HashMap<String,Command>(){{
         this.put("examine", new Examine());
@@ -43,10 +43,24 @@ public class Main {
                 System.out.println("No CrimeScene; do 'generate' first");
                 return;
             }
+            // examine stuph
+            if (params.length == 0) {
+                System.out.println("Examine what?");
+                return;
+            }
+            if (params[0].matches("(victim|corpse)")) {
+                System.out.println("You examine the victim's corpse...");
+                System.out.println("The victim is a " +
+                        scene.getVictim().getAge().getDescription() +
+                        " " + scene.getVictim().getRace().name().toLowerCase() +
+                        " " + scene.getVictim().getJob().name().toLowerCase() + ".");
+                System.out.println(capitalize(scene.getVictim().getMethod().getDescription()) + ".");
+            }
+            // detect magic on corpse
         }
         @Override
         public String getHelpText() {
-            return "Examine a clue";
+            return "Examine elements of the crime scene";
         }
     }
 
@@ -159,16 +173,40 @@ public class Main {
     }
 
     private class CrimeScene {
+        private Corpse victim;
+        private ArrayList<NPCharacter> suspects;
         private ArrayList<Clue> allClues;
+
+        CrimeScene(){
+            this.victim = new Corpse();
+            NPCharacter killer = new NPCharacter(new MurderWeapon(victim.getMethod()));
+            this.suspects = new ArrayList<NPCharacter>(){{
+                this.add(killer);
+                for (int i = 0; i < 9; i++) {
+                    this.add(new NPCharacter());
+                }
+            }};
+            this.allClues = new ArrayList<Clue>(){{
+                this.add(new Clue(killer.getRace().getFootprintSize() + " footprints",10));
+            }};
+            Collections.shuffle(suspects);
+        }
+
+        public Corpse getVictim() {
+            return victim;
+        }
+        public ArrayList<NPCharacter> getSuspects() {
+            return suspects;
+        }
         public ArrayList<Clue> getAllClues() {
             return allClues;
         }
-        public void setAllClues(ArrayList<Clue> allClues) {
-            this.allClues = allClues;
-        }
+//		public void setAllClues(ArrayList<Clue> allClues) {
+//			this.allClues = allClues;
+//		}
     }
 
-    private class Clue {
+    private static class Clue {
         private boolean found = false;
         private final String description;
         private final int checkDC;
@@ -192,10 +230,16 @@ public class Main {
     }
 
     private class Corpse {
+        private final Race race;
+        private final Occupation job;
+        private final Age age;
         private final TimeOfDeath tod;
         private final MurderMethod method;
 
         public Corpse() {
+            this.race = Race.values()[rng.nextInt(Race.values().length)];
+            this.job = Occupation.values()[rng.nextInt(Occupation.values().length)];
+            this.age = Age.values()[rng.nextInt(Age.values().length)];
             this.tod = TimeOfDeath.values()[rng.nextInt(TimeOfDeath.values().length)];
             this.method = MurderMethod.values()[rng.nextInt(MurderMethod.values().length)];
         }
@@ -205,36 +249,56 @@ public class Main {
         public MurderMethod getMethod() {
             return method;
         }
+        public Race getRace() {
+            return race;
+        }
+        public Occupation getJob() {
+            return job;
+        }
+        public Age getAge() {
+            return age;
+        }
     }
 
     private enum TimeOfDeath {
-        EARLY_MORNING, LATE_MORNING,
-        EARLY_AFTERNOON, LATE_AFTERNOON,
-        EARLY_EVENING, LATE_EVENING,
-        EARLY_NIGHT, LATE_NIGHT;
+        EARLY_NIGHT(0,2), LATE_NIGHT(3,5),
+        EARLY_MORNING(6,8), LATE_MORNING(9,11),
+        EARLY_AFTERNOON(12,14), LATE_AFTERNOON(15,17),
+        EARLY_EVENING(18,20), LATE_EVENING(21,23);
+
+        private final int start;
+        private final int end;
+        TimeOfDeath(int start, int end){
+            this.start = start;
+            this.end = end;
+        }
+        public boolean containsHour(int hour) {
+            return this.start <= hour || hour <= this.end;
+        }
     }
 
     private enum MurderMethod {
-        STAB(false,false,"the victim has several deep stab wounds"),
-        SLASH(false,false,"the victim has several lacerations and has lost a lot of blood"),
-        CRUSH(false,false,"the victim has many contusions and broken bones"),
-        POISON(false,false,"the victim died clutching their gut, wearing an agonized expression"),
-        BURN(true,true,"the victim has severe burns and charred skin"),
-        SHOCK(true,true,"the victim has burst many small blood vessels and has minor burns"),
-        MELT(true,true,"the victim has severe burns, surrounded by bubbled and melted flesh"),
-        FREEZE(true,true,"the victim has pale, rigid, cracked skin, and is particularly cold to the touch"),
-        EVOCATION(true,false, "a dim aura of evocation still surrounds the victim"),
-        CONJURATION(true,false,"a dim aura of conjuration still surrounds the victim"),
-        NECROMANCY(true,false,"a dim aura of necromancy still surrounds the victim"),
-        ILLUSION(true,false,"a dim aura of illusion still surrounds the victim");
-        
-        final boolean isMagic;
-        final boolean isElemental;
-        final String description;
-        MurderMethod(boolean isMagic, boolean isElemental, String description) {
+        STAB(false,false,"the victim has several deep stab wounds","muted punctures and sharp intakes of breath"),
+        SLASH(false,false,"the victim has several lacerations and has lost a lot of blood","ripping and tearing"),
+        CRUSH(false,false,"the victim has many contusions and broken bones","heavy blows"),
+        POISON(false,false,"the victim died clutching their gut, wearing an agonized expression","coughing and retching"),
+        BURN(true,true,"the victim has severe burns and charred skin","a blast and crackling"),
+        SHOCK(true,true,"the victim has burst many small blood vessels and has minor burns","crackling and stuttering"),
+        MELT(true,true,"the victim has severe burns, surrounded by bubbled and melted flesh","a sizzle and a scream"),
+        FREEZE(true,true,"the victim has pale, rigid, cracked skin, and is particularly cold to the touch","a rush of wind"),
+        EVOCATION(true,false, "a dim aura of evocation still surrounds the victim","a magical discharge"),
+        CONJURATION(true,false,"a dim aura of conjuration still surrounds the victim","a magical portal opening and closing"),
+        NECROMANCY(true,false,"a dim aura of necromancy still surrounds the victim","an otherworldly whisper");
+
+        private final boolean isMagic;
+        private final boolean isElemental;
+        private final String description;
+        private final String sound;
+        MurderMethod(boolean isMagic, boolean isElemental, String description, String sound) {
             this.isMagic = isMagic;
             this.isElemental = isElemental;
             this.description = description;
+            this.sound = sound;
         }
         public boolean isMagic() {
             return isMagic;
@@ -242,34 +306,144 @@ public class Main {
         public boolean isElemental() {
             return isElemental;
         }
-        @Override
-        public String toString() {
+        public String getDescription() {
             return description;
+        }
+        public String getSound() {
+            return sound;
         }
     }
 
     private class MurderWeapon {
+        private HashMap<String, ArrayList<String>> weapons = new HashMap<String, ArrayList<String>>(){{
+            this.put("STAB",new ArrayList<String>(){{
+                this.add("a dagger");
+                this.add("a rapier");
+                this.add("a pick");
+                this.add("a spear");
+                this.add("a short sword");
+            }});
+            this.put("SLASH",new ArrayList<String>(){{
+                this.add("a longsword");
+                this.add("a sickle");
+                this.add("a handaxe");
+                this.add("a kukri");
+            }});
+            this.put("CRUSH",new ArrayList<String>(){{
+                this.add("a hammer");
+                this.add("a mace");
+                this.add("a club");
+            }});
+            this.put("POISON",new ArrayList<String>(){{
+                this.add("a vial of liquid");
+                this.add("a sachet of powder");
+            }});
+            this.put("BURN",new ArrayList<String>(){{
+                this.add("a wand of Burning Hands");
+                this.add("a wand of Scorching Ray");
 
+            }});
+            this.put("SHOCK",new ArrayList<String>(){{
+                this.add("a wand of Shocking Grasp");
+            }});
+            this.put("MELT",new ArrayList<String>(){{
+                this.add("a wand of Acid Splash");
+                this.add("a wand of Acid Arrow");
+            }});
+            this.put("FREEZE",new ArrayList<String>(){{
+                this.add("a wand of Ray of Frost");
+            }});
+            this.put("EVOCATION",new ArrayList<String>(){{
+                this.add("a wand of Magic Missile");
+            }});
+            this.put("CONJURATION",new ArrayList<String>(){{
+                this.add("a wand of Summon Monster I");
+            }});
+            this.put("NECROMANMCY",new ArrayList<String>(){{
+                this.add("a wand of Chill Touch");
+                this.add("a wand of Ray of Enfeeblement");
+            }});
+        }};
+        private final String description;
+        MurderWeapon(MurderMethod method) {
+            this.description = weapons.get(method.name()).get(rng.nextInt(weapons.get(method.name()).size()));
+        }
+        public String getDescription() {
+            return description;
+        }
     }
 
     private class NPCharacter {
+        private final MurderWeapon holdingWeapon;
+        private final Race race;
+        private final Age age;
+        private final SocialClass socClass;
+        private final Occupation job;
+        private final ArrayList<Quirk> quirks;
 
-    }
+        public NPCharacter(MurderWeapon weapon) {
+            this.holdingWeapon = weapon;
+            this.race = Race.values()[rng.nextInt(Race.values().length)];
+            this.age = Age.values()[rng.nextInt(Race.values().length)];
+            this.socClass = SocialClass.values()[rng.nextInt(SocialClass.values().length)];
+            this.job = Occupation.values()[rng.nextInt(Occupation.values().length)];
+            this.quirks = new ArrayList<Quirk>(){{
+                for (int i = 0; i < rng.nextInt(3); i++) {
+                    this.add(Quirk.values()[rng.nextInt(Quirk.values().length)]);
+                }
+            }};
+        }
+        public NPCharacter() {
+            this(null);
+        }
 
-    private final class Killer extends NPCharacter {
-
-    }
-
-    private final class Innocent extends NPCharacter {
-
+        public MurderWeapon getHoldingWeapon() {
+            return holdingWeapon;
+        }
+        public Race getRace() {
+            return race;
+        }
+        public Age getAge() {
+            return age;
+        }
+        public SocialClass getSocClass() {
+            return socClass;
+        }
+        public Occupation getJob() {
+            return job;
+        }
+        public ArrayList<Quirk> getQuirks() {
+            return quirks;
+        }
     }
 
     private enum Race {
-        HUMAN, HALFLING, ORC, ELF;
+        HUMAN("average-sized"),
+        HALFLING("small"),
+        ORC("large"),
+        ELF("average length but narrow");
+
+        private final String footprintSize;
+        Race(String footprintSize) {
+            this.footprintSize = footprintSize;
+        }
+        public String getFootprintSize() {
+            return footprintSize;
+        }
     }
 
     private enum Age {
+        YOUNG("young adult"),
+        MIDDLE_AGED("middle-aged"),
+        OLD("elderly");
 
+        private final String description;
+        Age(String desc) {
+            this.description = desc;
+        }
+        public String getDescription() {
+            return description;
+        }
     }
 
     private enum SocialClass {
@@ -277,11 +451,54 @@ public class Main {
     }
 
     private enum Occupation {
+        Grocer(new Clue()),
+        Fishmonger(),
+        Jeweler(),
+        Blacksmith(),
+        Apothecary(),
+        Baker(),
+        Bowyer(),
+        Brewer(),
+        Butcher(),
+        Carpenter(),
+        Cobbler(),
+        Cook(),
+        Fletcher(),
+        Haberdasher(),
+        Mason(),
+        Miller(),
+        Tobacconist(),
+        Barber(),
+        Gardener(),
+        Plasterer(),
+        Plumber(),
+        Teamster(),
+        Tinker(),
+        ChimneySweep(),
+        Groom(),
+        Guard(),
+        Server(),
+        Beggar();
 
+        private final ArrayList <Clue> possibleClues;
+        Occupation(Clue... inputClues){
+            this.possibleClues = new ArrayList<Clue>(){{
+                for (Clue c : inputClues) {
+                    this.add(c);
+                }
+            }};
+        }
+        public ArrayList<Clue> getPossibleClues() {
+            return possibleClues;
+        }
     }
 
     private enum Quirk {
 
+    }
+
+    private static String capitalize(final String line) {
+        return Character.toUpperCase(line.charAt(0)) + line.substring(1);
     }
 }
 
@@ -337,6 +554,37 @@ public class Main {
 
 
 /*
+Grocer,
+Fishmonger,
+Jeweler,
+Blacksmith,
+Apothecary,
+Baker,
+Bowyer,
+Brewer,
+Butcher,
+Carpenter,
+Cobbler,
+Cook,
+Fletcher,
+Haberdasher,
+Mason,
+Miller,
+Tobacconist,
+Barber,
+Gardener,
+Plasterer,
+Plumber,
+Teamster,
+Tinker,
+Chimney Sweep,
+Groom,
+Guard,
+Server,
+Beggar,
+*/
+
+/*
 Profession: Merchant: Mercer (general stores)         Guild:        Mercers #1
 Profession: Merchant: Grocer (sells vegtables)        Guild:        Grocer #2
 Profession: Merchant: Clothier                        Guild:        Drapers #3
@@ -350,9 +598,8 @@ Craft: Salter                                         Guild:        Salters #9
 Craft: Blacksmith                                     Guild:        Ironmongers #10
 Craft: Vintner                                        Guild:        Vintners #11
 Profession: Merchant: Clothier                        Guild:        Clothiers #12
-
-
-Craft: Apocathery (Herbalist)                         Guild:        Apothecaries
+s
+Craft: Apothecary (Herbalist)                         Guild:        Apothecaries
 Craft: Armorer                                        Guild:        Armourers & Braziers
 Craft: Baker                                          Guild:        Bakers
 Craft: Basketweaver (baskets & wicker items)          Guild:        Basketweavers
@@ -484,7 +731,7 @@ Profession: Prize fighter
 Profession: Rancher
 Profession: Rat Catcher
 Profession: Sage
-Profession: Server (Barteneder, serving wench)
+Profession: Server (Bartender, serving wench)
 Profession: Shearer
 Profession: Slaver
 Profession: Spy
