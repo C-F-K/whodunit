@@ -21,6 +21,8 @@ public class Main {
         String cmd;
         String[] params;
 
+        scene = new CrimeScene();
+
         while(true) {
             System.out.print("> ");
             params = s.nextLine().toLowerCase().split(" ");
@@ -49,14 +51,38 @@ public class Main {
                 return;
             }
             if (params[0].matches("(victim|corpse)")) {
+                String article = scene.getVictim().getAge().getDescription().charAt(0) == 'e' ? "n " : " ";
                 System.out.println("You examine the victim's corpse...");
-                System.out.println("The victim is a " +
+                System.out.println("The victim is a" +
+                        article +
                         scene.getVictim().getAge().getDescription() +
                         " " + scene.getVictim().getRace().name().toLowerCase() +
                         " " + scene.getVictim().getJob().name().toLowerCase() + ".");
-                System.out.println(capitalize(scene.getVictim().getMethod().getDescription()) + ".");
             }
-            // detect magic on corpse
+            // mundane examine
+            if (scene.getVictim().getMethod().isElemental() || !scene.getVictim().getMethod().isMagic()) {
+                System.out.println(capitalize(scene.getVictim().getMethod().getDescription()) + ".");
+            } else {
+                System.out.println("Nothing else makes itself particularly apparent.");
+            }
+            if (params.length > 1) {
+                if (params[1].matches("with")) {
+                    if (params.length > 2) {
+                        if (params[2].matches("detect-magic")) {
+                            // using detect magic
+                            if (scene.getVictim().getMethod().isMagic()) { //
+                                if (scene.getVictim().getMethod().isElemental()) {
+                                    System.out.println(capitalize(MurderMethod.EVOCATION.getDescription()) + ".");
+                                    return;
+                                } else {
+                                    System.out.println(capitalize(scene.getVictim().getMethod().getDescription()) + ".");
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         @Override
         public String getHelpText() {
@@ -172,7 +198,7 @@ public class Main {
         }
     }
 
-    private class CrimeScene {
+    private static class CrimeScene {
         private Corpse victim;
         private ArrayList<NPCharacter> suspects;
         private ArrayList<Clue> allClues;
@@ -229,7 +255,7 @@ public class Main {
         }
     }
 
-    private class Corpse {
+    private static class Corpse {
         private final Race race;
         private final Occupation job;
         private final Age age;
@@ -314,8 +340,8 @@ public class Main {
         }
     }
 
-    private class MurderWeapon {
-        private HashMap<String, ArrayList<String>> weapons = new HashMap<String, ArrayList<String>>(){{
+    private static class MurderWeapon {
+        private static HashMap<String, ArrayList<String>> weapons = new HashMap<String, ArrayList<String>>(){{
             this.put("STAB",new ArrayList<String>(){{
                 this.add("a dagger");
                 this.add("a rapier");
@@ -359,21 +385,21 @@ public class Main {
             this.put("CONJURATION",new ArrayList<String>(){{
                 this.add("a wand of Summon Monster I");
             }});
-            this.put("NECROMANMCY",new ArrayList<String>(){{
+            this.put("NECROMANCY",new ArrayList<String>(){{
                 this.add("a wand of Chill Touch");
                 this.add("a wand of Ray of Enfeeblement");
             }});
         }};
         private final String description;
         MurderWeapon(MurderMethod method) {
-            this.description = weapons.get(method.name()).get(rng.nextInt(weapons.get(method.name()).size()));
+            this.description = weapons.get(method.name()).get(rng.nextInt(weapons.size()));
         }
         public String getDescription() {
             return description;
         }
     }
 
-    private class NPCharacter {
+    private static class NPCharacter {
         private final MurderWeapon holdingWeapon;
         private final Race race;
         private final Age age;
@@ -384,7 +410,7 @@ public class Main {
         public NPCharacter(MurderWeapon weapon) {
             this.holdingWeapon = weapon;
             this.race = Race.values()[rng.nextInt(Race.values().length)];
-            this.age = Age.values()[rng.nextInt(Race.values().length)];
+            this.age = Age.values()[rng.nextInt(Age.values().length)];
             this.socClass = SocialClass.values()[rng.nextInt(SocialClass.values().length)];
             this.job = Occupation.values()[rng.nextInt(Occupation.values().length)];
             this.quirks = new ArrayList<Quirk>(){{
@@ -447,11 +473,11 @@ public class Main {
     }
 
     private enum SocialClass {
-
+        LOWER,MIDDLE,UPPER
     }
 
     private enum Occupation {
-        Grocer(new Clue()),
+        //		Grocer(new Clue()),
         Fishmonger(),
         Jeweler(),
         Blacksmith(),
@@ -494,7 +520,7 @@ public class Main {
     }
 
     private enum Quirk {
-
+        SMOKES,BAD_EYESIGHT,OTHER_QUIRK
     }
 
     private static String capitalize(final String line) {
