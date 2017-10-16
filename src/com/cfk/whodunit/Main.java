@@ -3,25 +3,35 @@ package com.cfk.whodunit;
 import java.util.*;
 
 public class Main {
-    private static final Random rng = new Random(System.currentTimeMillis());
+    private static Random rng;
 
-    private static HashMap<String,Command> allowedCmds = new HashMap<String,Command>(){{
-        this.put("examine", new Examine());
+    private static HashMap<String,Command> allowedCmds = new HashMap<>(){{
+        // system commands
+        this.put("help", new Help());
         this.put("exit", new Exit());
         this.put("generate", new Generate());
-        this.put("help", new Help());
+        // generic actions
+        this.put("examine", new Examine());                         // learn more about a clue
+        this.put("talk", new Talk());                               // like examine but for people
         this.put("list", new ListAssets());
-        this.put("search", new Search());
+        // d&d skill checks
+        this.put("diplomacy", new Diplomacy());                     // like getting a better result on clue skill check
+        this.put("gather-information", new GatherInformation());    // like search but for people
+        this.put("search", new Search());                           // find more clues
     }};
 
     private static CrimeScene scene;
 
     public static void main(String[] args) {
+        try {
+            rng = new Random(Long.parseLong(args[0]));
+        } catch (NumberFormatException e) {
+            rng = new Random(System.currentTimeMillis());
+        }
+
         Scanner s = new Scanner(System.in);
         String cmd;
         String[] params;
-
-        scene = new CrimeScene();
 
         while(true) {
             System.out.print("> ");
@@ -50,7 +60,7 @@ public class Main {
                 System.out.println("Examine what?");
                 return;
             }
-            if (params[0].matches("(victim|corpse)")) {
+            if (params[0].matches("(victim|corpse|body)")) {
                 String article = scene.getVictim().getAge().getDescription().charAt(0) == 'e' ? "n " : " ";
                 System.out.println("You examine the victim's corpse...");
                 System.out.println("The victim is a" +
@@ -63,22 +73,16 @@ public class Main {
             if (scene.getVictim().getMethod().isElemental() || !scene.getVictim().getMethod().isMagic()) {
                 System.out.println(capitalize(scene.getVictim().getMethod().getDescription()) + ".");
             } else {
-                System.out.println("Nothing else makes itself particularly apparent.");
+                System.out.println("Nothing else makes itself apparent to the eye.");
             }
-            if (params.length > 1) {
-                if (params[1].matches("with")) {
-                    if (params.length > 2) {
-                        if (params[2].matches("detect-magic")) {
-                            // using detect magic
-                            if (scene.getVictim().getMethod().isMagic()) { //
-                                if (scene.getVictim().getMethod().isElemental()) {
-                                    System.out.println(capitalize(MurderMethod.EVOCATION.getDescription()) + ".");
-                                    return;
-                                } else {
-                                    System.out.println(capitalize(scene.getVictim().getMethod().getDescription()) + ".");
-                                    return;
-                                }
-                            }
+            if (params.length > 1 && params[1].matches("with")) {
+                if (params.length > 2 && params[2].matches("detect-magic")) {
+                    // using detect magic
+                    if (scene.getVictim().getMethod().isMagic()) { //
+                        if (scene.getVictim().getMethod().isElemental()) {
+                            System.out.println(capitalize(MurderMethod.EVOCATION.getDescription()) + ".");
+                        } else {
+                            System.out.println(capitalize(scene.getVictim().getMethod().getDescription()) + ".");
                         }
                     }
                 }
@@ -104,7 +108,16 @@ public class Main {
     private static class Generate implements Command {
         @Override
         public void doCommand(String... params) {
-
+            if (scene != null) {
+                Scanner s = new Scanner(System.in);
+                System.out.println("A CrimeScene already exists. Generating a new one will overwrite it and erase all your progress. Continue? y/N");
+                System.out.print("> ");
+                if (!s.nextLine().toLowerCase().trim().equals("y")) {
+                    return;
+                }
+            }
+            // do generate
+            scene = new CrimeScene();
         }
         @Override
         public String getHelpText() {
@@ -160,6 +173,39 @@ public class Main {
         }
     }
 
+    private static class Talk implements Command {
+//        @Override
+//        public void doCommand(String... params) {
+//
+//        }
+        @Override
+        public String getHelpText() {
+            return "Talk to a suspect";
+        }
+    }
+
+    private static class Diplomacy implements Command {
+//        @Override
+//        public void doCommand(String... params) {
+//
+//        }
+        @Override
+        public String getHelpText() {
+            return "Improve a character's attitude towards you";
+        }
+    }
+
+    private static class GatherInformation implements Command {
+//        @Override
+//        public void doCommand(String... params) {
+//
+//        }
+        @Override
+        public String getHelpText() {
+            return "Locate new suspects or sources of information";
+        }
+    }
+
     private static class Search implements Command {
         @Override
         public void doCommand(String... params) {
@@ -180,11 +226,11 @@ public class Main {
             }
             boolean foundClues = false;
             for (Clue clue : scene.getAllClues()) {
-                if (result >= clue.getCheckDC()) {
+                clue.find(result);
+                if (clue.isFound()) {
                     if (!foundClues) {
                         foundClues = true;
                     }
-                    clue.setFound(true);
                     System.out.println("Found new clue: " + clue.getDescription());
                 }
             }
@@ -206,14 +252,16 @@ public class Main {
         CrimeScene(){
             this.victim = new Corpse();
             NPCharacter killer = new NPCharacter(new MurderWeapon(victim.getMethod()));
-            this.suspects = new ArrayList<NPCharacter>(){{
+            this.suspects = new ArrayList<>(){{
                 this.add(killer);
                 for (int i = 0; i < 9; i++) {
                     this.add(new NPCharacter());
                 }
             }};
-            this.allClues = new ArrayList<Clue>(){{
+            this.allClues = new ArrayList<>(){{
                 this.add(new Clue(killer.getRace().getFootprintSize() + " footprints",10));
+                // add all killer clues
+                // select between x and y suspects and add between p and q clues from each
             }};
             Collections.shuffle(suspects);
         }
@@ -227,9 +275,6 @@ public class Main {
         public ArrayList<Clue> getAllClues() {
             return allClues;
         }
-//		public void setAllClues(ArrayList<Clue> allClues) {
-//			this.allClues = allClues;
-//		}
     }
 
     private static class Clue {
@@ -244,14 +289,11 @@ public class Main {
         public boolean isFound() {
             return found;
         }
-        public void setFound(boolean found) {
-            this.found = found;
+        public void find(int checkResult) {
+            this.found = checkResult >= this.checkDC;
         }
         public String getDescription() {
             return description;
-        }
-        public int getCheckDC() {
-            return checkDC;
         }
     }
 
@@ -341,51 +383,51 @@ public class Main {
     }
 
     private static class MurderWeapon {
-        private static HashMap<String, ArrayList<String>> weapons = new HashMap<String, ArrayList<String>>(){{
-            this.put("STAB",new ArrayList<String>(){{
+        private static HashMap<String, ArrayList<String>> weapons = new HashMap<>(){{
+            this.put("STAB",new ArrayList<>(){{
                 this.add("a dagger");
                 this.add("a rapier");
                 this.add("a pick");
                 this.add("a spear");
                 this.add("a short sword");
             }});
-            this.put("SLASH",new ArrayList<String>(){{
+            this.put("SLASH",new ArrayList<>(){{
                 this.add("a longsword");
                 this.add("a sickle");
                 this.add("a handaxe");
                 this.add("a kukri");
             }});
-            this.put("CRUSH",new ArrayList<String>(){{
+            this.put("CRUSH",new ArrayList<>(){{
                 this.add("a hammer");
                 this.add("a mace");
                 this.add("a club");
             }});
-            this.put("POISON",new ArrayList<String>(){{
+            this.put("POISON",new ArrayList<>(){{
                 this.add("a vial of liquid");
                 this.add("a sachet of powder");
             }});
-            this.put("BURN",new ArrayList<String>(){{
+            this.put("BURN",new ArrayList<>(){{
                 this.add("a wand of Burning Hands");
                 this.add("a wand of Scorching Ray");
 
             }});
-            this.put("SHOCK",new ArrayList<String>(){{
+            this.put("SHOCK",new ArrayList<>(){{
                 this.add("a wand of Shocking Grasp");
             }});
-            this.put("MELT",new ArrayList<String>(){{
+            this.put("MELT",new ArrayList<>(){{
                 this.add("a wand of Acid Splash");
                 this.add("a wand of Acid Arrow");
             }});
-            this.put("FREEZE",new ArrayList<String>(){{
+            this.put("FREEZE",new ArrayList<>(){{
                 this.add("a wand of Ray of Frost");
             }});
-            this.put("EVOCATION",new ArrayList<String>(){{
+            this.put("EVOCATION",new ArrayList<>(){{
                 this.add("a wand of Magic Missile");
             }});
-            this.put("CONJURATION",new ArrayList<String>(){{
+            this.put("CONJURATION",new ArrayList<>(){{
                 this.add("a wand of Summon Monster I");
             }});
-            this.put("NECROMANCY",new ArrayList<String>(){{
+            this.put("NECROMANCY",new ArrayList<>(){{
                 this.add("a wand of Chill Touch");
                 this.add("a wand of Ray of Enfeeblement");
             }});
@@ -413,7 +455,7 @@ public class Main {
             this.age = Age.values()[rng.nextInt(Age.values().length)];
             this.socClass = SocialClass.values()[rng.nextInt(SocialClass.values().length)];
             this.job = Occupation.values()[rng.nextInt(Occupation.values().length)];
-            this.quirks = new ArrayList<Quirk>(){{
+            this.quirks = new ArrayList<>(){{
                 for (int i = 0; i < rng.nextInt(3); i++) {
                     this.add(Quirk.values()[rng.nextInt(Quirk.values().length)]);
                 }
@@ -478,37 +520,37 @@ public class Main {
 
     private enum Occupation {
         //		Grocer(new Clue()),
-        Fishmonger(),
-        Jeweler(),
-        Blacksmith(),
-        Apothecary(),
-        Baker(),
-        Bowyer(),
-        Brewer(),
-        Butcher(),
-        Carpenter(),
-        Cobbler(),
-        Cook(),
-        Fletcher(),
-        Haberdasher(),
-        Mason(),
-        Miller(),
-        Tobacconist(),
-        Barber(),
-        Gardener(),
-        Plasterer(),
-        Plumber(),
-        Teamster(),
-        Tinker(),
-        ChimneySweep(),
-        Groom(),
-        Guard(),
-        Server(),
-        Beggar();
+        FISHMONGER(),
+        JEWELER(),
+        BLACKSMITH(),
+        APOTHECARY(),
+        BAKER(),
+        BOWYER(),
+        BREWER(),
+        BUTCHER(),
+        CARPENTER(),
+        COBBLER(),
+        COOK(),
+        FLETCHER(),
+        HABERDASHER(),
+        MASON(),
+        MILLER(),
+        TOBACCONIST(),
+        BARBER(),
+        GARDENER(),
+        PLASTERER(),
+        PLUMBER(),
+        TEAMSTER(),
+        TINKER(),
+        CHIMNEY_SWEEP(),
+        GROOM(),
+        GUARD(),
+        SERVER(),
+        BEGGAR();
 
         private final ArrayList <Clue> possibleClues;
         Occupation(Clue... inputClues){
-            this.possibleClues = new ArrayList<Clue>(){{
+            this.possibleClues = new ArrayList<>(){{
                 for (Clue c : inputClues) {
                     this.add(c);
                 }
@@ -540,7 +582,6 @@ public class Main {
  *          poor/working/middle(civil/merchant/military)/upper(socialite/merchant)/noble/burgher
  *      age
  *          youngish, middle-aged, old
- *      sex
  *      traits
  *          handedness
  *          hair color
@@ -566,6 +607,15 @@ public class Main {
  *      avoid: being able to brute force which is the killer
  *          because some clues don't refer to anyone
  *          and all the ones that do refer to the killer
+ *
+ *  a clue should have:
+ *      (quick-reference id for use with examine command?)
+ *      physical description
+ *      hash of possible skills +
+ *          hash of check result thresholds + what you know if you beat that DC
+ *
+ *  a suspect should have:
+ *      (also quick-ref for talk command?)
  *
  *  nice to have:
  *      diff clues need diff skills to find
