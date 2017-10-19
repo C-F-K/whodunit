@@ -4,6 +4,7 @@ import java.util.*;
 
 public class Main {
     private static Random rng;
+    private static final HashMap<String, HashMap<Integer, String>> EMPTY_HASH = new HashMap<>();
 
     private static HashMap<String,Command> allowedCmds = new HashMap<>(){{
         // system commands
@@ -60,6 +61,7 @@ public class Main {
                 System.out.println("Examine what?");
                 return;
             }
+            // stuph = corpse
             if (params[0].matches("(victim|corpse|body)")) {
                 String article = scene.getVictim().getAge().getDescription().charAt(0) == 'e' ? "n " : " ";
                 System.out.println("You examine the victim's corpse...");
@@ -68,26 +70,36 @@ public class Main {
                         scene.getVictim().getAge().getDescription() +
                         " " + scene.getVictim().getRace().name().toLowerCase() +
                         " " + scene.getVictim().getJob().name().toLowerCase() + ".");
-            }
-            // mundane examine
-            if (scene.getVictim().getMethod().isElemental() || !scene.getVictim().getMethod().isMagic()) {
-                System.out.println(capitalize(scene.getVictim().getMethod().getDescription()) + ".");
-            } else {
-                System.out.println("Nothing else makes itself apparent to the eye.");
-            }
-            if (params.length > 1 && params[1].matches("with")) {
-                if (params.length > 2 && params[2].matches("detect-magic")) {
-                    // using detect magic
-                    if (scene.getVictim().getMethod().isMagic()) { //
-                        if (scene.getVictim().getMethod().isElemental()) {
-                            System.out.println(capitalize(MurderMethod.EVOCATION.getDescription()) + ".");
-                        } else {
-                            System.out.println(capitalize(scene.getVictim().getMethod().getDescription()) + ".");
+                // mundane examine
+                if (scene.getVictim().getMethod().isElemental() || !scene.getVictim().getMethod().isMagic()) {
+                    System.out.println(capitalize(scene.getVictim().getMethod().getDescription()) + ".");
+                } else {
+                    System.out.println("Nothing else makes itself apparent to the eye.");
+                }
+                if (params.length > 1 && params[1].matches("with")) {
+                    if (params.length > 2 && params[2].matches("detect-magic")) {
+                        // using detect magic
+                        if (scene.getVictim().getMethod().isMagic()) { //
+                            if (scene.getVictim().getMethod().isElemental()) {
+                                System.out.println(capitalize(MurderMethod.EVOCATION.getDescription()) + ".");
+                            } else {
+                                System.out.println(capitalize(scene.getVictim().getMethod().getDescription()) + ".");
+                            }
                         }
                     }
                 }
+                // stuph = a clue
+            } else if (params[0].matches("clue")) {
+                if (params.length > 1 && scene.getClueIds().contains(params[0])) {
+                    // blat blat blat boom skyaattt ka ka ka
+                }
             }
         }
+        //  a clue should have:
+//      (quick-reference id for use with examine command?)
+//      physical description
+//      hash of possible skills +
+//		    hash of check result thresholds + what you know if you beat that DC
         @Override
         public String getHelpText() {
             return "Examine elements of the crime scene";
@@ -174,7 +186,7 @@ public class Main {
     }
 
     private static class Talk implements Command {
-//        @Override
+        //        @Override
 //        public void doCommand(String... params) {
 //
 //        }
@@ -185,7 +197,7 @@ public class Main {
     }
 
     private static class Diplomacy implements Command {
-//        @Override
+        //        @Override
 //        public void doCommand(String... params) {
 //
 //        }
@@ -196,7 +208,7 @@ public class Main {
     }
 
     private static class GatherInformation implements Command {
-//        @Override
+        //        @Override
 //        public void doCommand(String... params) {
 //
 //        }
@@ -259,7 +271,7 @@ public class Main {
                 }
             }};
             this.allClues = new ArrayList<>(){{
-                this.add(new Clue(killer.getRace().getFootprintSize() + " footprints",10));
+                this.add(new Clue(killer.getRace().getFootprintSize() + " footprints",10, EMPTY_HASH));
                 // add all killer clues
                 // select between x and y suspects and add between p and q clues from each
             }};
@@ -275,25 +287,44 @@ public class Main {
         public ArrayList<Clue> getAllClues() {
             return allClues;
         }
+        public ArrayList<Integer> getClueIds() {
+            return new ArrayList<>(){{
+                for (Clue c : allClues) {
+                    this.add(c.getId());
+                }
+            }};
+        }
     }
 
     private static class Clue {
+        private static int globalID = 0;
+        // some fuckery is needed here
+        private final int id;
         private boolean found = false;
         private final String description;
-        private final int checkDC;
+        private final int searchDC;
+        private final HashMap<String, HashMap<Integer, String>> skills;
 
-        public Clue(String desc, int checkDC) {
+        public Clue(String desc, int checkDC, HashMap<String, HashMap<Integer, String>> skills) {
+            this.id = ++globalID;
             this.description = desc;
-            this.checkDC = checkDC;
+            this.searchDC = checkDC;
+            this.skills = skills;
         }
         public boolean isFound() {
             return found;
         }
-        public void find(int checkResult) {
-            this.found = checkResult >= this.checkDC;
+        public void find(int searchResult) {
+            this.found = searchResult >= this.searchDC;
         }
         public String getDescription() {
             return description;
+        }
+        public HashMap<String, HashMap<Integer, String>> getSkills() {
+            return skills;
+        }
+        public int getId() {
+            return id;
         }
     }
 
@@ -616,6 +647,8 @@ public class Main {
  *
  *  a suspect should have:
  *      (also quick-ref for talk command?)
+ *      description auto-genned by props
+ *      hash of diplomacy attitude thresholds + what you know if you reach that level
  *
  *  nice to have:
  *      diff clues need diff skills to find
