@@ -90,8 +90,15 @@ public class Main {
                 }
                 // stuph = a clue
             } else if (params[0].matches("clue")) {
-                if (params.length > 1 && scene.getClueIds().contains(params[0])) {
-                    // blat blat blat boom skyaattt ka ka ka
+                try {
+                    if (params.length > 1 && scene.getClueIds().contains(Integer.parseInt(params[1]))) {
+                        Clue clue = scene.getClueById(Integer.parseInt(params[1]));
+                        if (params.length > 2 && params[2].equals("with") && clue != null) {
+                            // do a thing
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Bad clue ID");
                 }
             }
         }
@@ -293,6 +300,14 @@ public class Main {
                     this.add(c.getId());
                 }
             }};
+        }
+        public Clue getClueById(int id) {
+            for (Clue c : allClues) {
+                if (c.getId() == id) {
+                    return c;
+                }
+            }
+            return null;
         }
     }
 
