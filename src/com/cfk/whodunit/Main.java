@@ -93,20 +93,23 @@ public class Main {
                 try {
                     if (params.length > 1 && scene.getClueIds().contains(Integer.parseInt(params[1]))) {
                         Clue clue = scene.getClueById(Integer.parseInt(params[1]));
-                        if (params.length > 2 && params[2].equals("with") && clue != null) {
-                            // do a thing
+                        if (clue != null && params.length > 2 && params[2].equals("with")) {
+                            if (params.length > 3 && clue.getSkills().keySet().contains(params[3])) {
+                                try {
+                                    if (params.length > 4) {
+                                        System.out.print(clue.getInfoAtOrBelowCheck(params[3], Integer.parseInt(params[4])));
+                                    }
+                                } catch (NumberFormatException e) {
+                                    System.out.println("Skill check result is badly formatted");
+                                }
+                            }
                         }
                     }
                 } catch (NumberFormatException e) {
-                    System.out.println("Bad clue ID");
+                    System.out.println("Clue ID doesn't exist or is badly formatted");
                 }
             }
         }
-        //  a clue should have:
-//      (quick-reference id for use with examine command?)
-//      physical description
-//      hash of possible skills +
-//		    hash of check result thresholds + what you know if you beat that DC
         @Override
         public String getHelpText() {
             return "Examine elements of the crime scene";
@@ -340,6 +343,16 @@ public class Main {
         }
         public int getId() {
             return id;
+        }
+
+        public String getInfoAtOrBelowCheck(String skill, int checkResult) {
+            StringBuilder result = new StringBuilder();
+            skills.get(skill).forEach((check,info) -> {
+                if (checkResult >= check) {
+                    result.append(info).append("\n");
+                }
+            });
+            return result.toString();
         }
     }
 
