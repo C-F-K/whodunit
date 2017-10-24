@@ -100,13 +100,18 @@ public class Main {
                                         System.out.print(clue.getInfoAtOrBelowCheck(params[3], Integer.parseInt(params[4])));
                                     }
                                 } catch (NumberFormatException e) {
-                                    System.out.println("Skill check result is badly formatted");
+                                    System.err.println("Skill check result is badly formatted");
+                                    System.err.flush();
                                 }
                             }
+                        } else if (clue == null) {
+                            System.err.println("Clue ID doesn't exist");
+                            System.err.flush();
                         }
                     }
                 } catch (NumberFormatException e) {
-                    System.out.println("Clue ID doesn't exist or is badly formatted");
+                    System.err.println("Clue ID is badly formatted");
+                    System.err.flush();
                 }
             }
         }
@@ -196,7 +201,7 @@ public class Main {
     }
 
     private static class Talk implements Command {
-        //        @Override
+//        @Override
 //        public void doCommand(String... params) {
 //
 //        }
@@ -207,7 +212,7 @@ public class Main {
     }
 
     private static class Diplomacy implements Command {
-        //        @Override
+//        @Override
 //        public void doCommand(String... params) {
 //
 //        }
@@ -218,7 +223,7 @@ public class Main {
     }
 
     private static class GatherInformation implements Command {
-        //        @Override
+//        @Override
 //        public void doCommand(String... params) {
 //
 //        }
@@ -243,7 +248,8 @@ public class Main {
             try {
                 result = Integer.parseInt(params[0]);
             } catch (NumberFormatException e) {
-                System.out.println("Search check result not formatted correctly - needs whole number");
+                System.err.println("Search check result not formatted correctly - needs whole number");
+                System.err.flush();
                 return;
             }
             boolean foundClues = false;
