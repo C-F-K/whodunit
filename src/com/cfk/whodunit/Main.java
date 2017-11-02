@@ -94,7 +94,7 @@ public class Main {
                     if (params.length > 1 && scene.getClueIds().contains(Integer.parseInt(params[1]))) {
                         Clue clue = scene.getClueById(Integer.parseInt(params[1]));
                         if (clue != null && params.length > 2 && params[2].equals("with")) {
-                            if (params.length > 3 && clue.getSkills().keySet().contains(params[3])) {
+                            if (params.length > 3 && clue.getSkills().containsKey(params[3])) {
                                 try {
                                     if (params.length > 4) {
                                         System.out.print(clue.getInfoAtOrBelowCheck(params[3], Integer.parseInt(params[4])));
@@ -103,6 +103,8 @@ public class Main {
                                     System.err.println("Skill check result is badly formatted");
                                     System.err.flush();
                                 }
+                            } else if (!clue.getSkills().containsKey(params[3])) {
+                                System.out.println("This skill won't tell you anything about this clue");
                             }
                         } else if (clue == null) {
                             System.err.println("Clue ID doesn't exist");
@@ -201,7 +203,7 @@ public class Main {
     }
 
     private static class Talk implements Command {
-//        @Override
+        //        @Override
 //        public void doCommand(String... params) {
 //
 //        }
@@ -212,7 +214,7 @@ public class Main {
     }
 
     private static class Diplomacy implements Command {
-//        @Override
+        //        @Override
 //        public void doCommand(String... params) {
 //
 //        }
@@ -223,7 +225,7 @@ public class Main {
     }
 
     private static class GatherInformation implements Command {
-//        @Override
+        //        @Override
 //        public void doCommand(String... params) {
 //
 //        }
@@ -358,6 +360,7 @@ public class Main {
                     result.append(info).append("\n");
                 }
             });
+
             return result.toString();
         }
     }
