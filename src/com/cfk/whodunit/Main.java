@@ -203,10 +203,10 @@ public class Main {
     }
 
     private static class Talk implements Command {
-        //        @Override
-//        public void doCommand(String... params) {
-//
-//        }
+        @Override
+        public void doCommand(String... params) {
+
+        }
         @Override
         public String getHelpText() {
             return "Talk to a suspect";
@@ -214,10 +214,10 @@ public class Main {
     }
 
     private static class Diplomacy implements Command {
-        //        @Override
-//        public void doCommand(String... params) {
-//
-//        }
+        @Override
+        public void doCommand(String... params) {
+
+        }
         @Override
         public String getHelpText() {
             return "Improve a character's attitude towards you";
@@ -225,10 +225,29 @@ public class Main {
     }
 
     private static class GatherInformation implements Command {
-        //        @Override
-//        public void doCommand(String... params) {
-//
-//        }
+        @Override
+        public void doCommand(String... params) {
+            if (scene == null) {
+                System.out.println("No CrimeScene; do 'generate' first");
+                return;
+            }
+            if (params.length == 0) {
+                System.out.println("Needs additional parameter - Gather Information check result");
+                return;
+            }
+            int result;
+            try {
+                result = Integer.parseInt(params[0]);
+            } catch (NumberFormatException e) {
+                System.err.println("Gather Information check result not formatted correctly - needs whole number");
+                System.err.flush();
+                return;
+            }
+            ;
+            // TODO: implement network of people
+            // +1 degrees of separation from victim -> +5 to Gather DC
+            // suspect = DC 10; therefore, iterations deepwise = (result - 10) / 5 bork bork
+        }
         @Override
         public String getHelpText() {
             return "Locate new suspects or sources of information";
