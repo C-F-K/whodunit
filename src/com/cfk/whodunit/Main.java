@@ -12,9 +12,9 @@ public class Main {
         this.put("exit", new Exit());
         this.put("generate", new Generate());
         // generic actions
+        this.put("list", new ListAssets());
         this.put("examine", new Examine());                         // learn more about a clue
         this.put("talk", new Talk());                               // like examine but for people
-        this.put("list", new ListAssets());
         // d&d skill checks
         this.put("diplomacy", new Diplomacy());                     // like getting a better result on clue skill check
         this.put("gather-information", new GatherInformation());    // like search but for people
@@ -246,7 +246,7 @@ public class Main {
             ;
             // TODO: implement network of people
             // +1 degrees of separation from victim -> +5 to Gather DC
-            // suspect = DC 10; therefore, iterations deepwise = (result - 10) / 5 bork bork
+            // victim = DC 10; therefore, iterations deepwise = (result - 10) / 5 bork bork
         }
         @Override
         public String getHelpText() {
@@ -300,18 +300,23 @@ public class Main {
 
         CrimeScene(){
             this.victim = new Corpse();
-            NPCharacter killer = new NPCharacter(new MurderWeapon(victim.getMethod()));
-            this.suspects = new ArrayList<>(){{
-                this.add(killer);
-                for (int i = 0; i < 9; i++) {
-                    this.add(new NPCharacter());
-                }
-            }};
-            this.allClues = new ArrayList<>(){{
-                this.add(new Clue(killer.getRace().getFootprintSize() + " footprints",10, EMPTY_HASH));
-                // add all killer clues
-                // select between x and y suspects and add between p and q clues from each
-            }};
+            // TODO: iterate recursively through corpse's knowns and knowns of knowns etc, add2set
+            // TODO: set killer as random select from set of characters
+            // TODO: by adding to a random character's set of knowns! getDegreesOfSep to maintain parity
+			/*
+			NPCharacter killer = new NPCharacter(new MurderWeapon(victim.getMethod()));
+			this.suspects = new ArrayList<>(){{
+				this.add(killer);
+				for (int i = 0; i < 9; i++) {
+					this.add(new NPCharacter());
+				}
+			}};
+			this.allClues = new ArrayList<>(){{
+				this.add(new Clue(killer.getRace().getFootprintSize() + " footprints",10, EMPTY_HASH));
+				// add all killer clues
+				// select between x and y suspects and add between p and q clues from each
+			}};
+			*/
             Collections.shuffle(suspects);
         }
 
@@ -384,17 +389,12 @@ public class Main {
         }
     }
 
-    private static class Corpse {
-        private final Race race;
-        private final Occupation job;
-        private final Age age;
-        private final TimeOfDeath tod;
-        private final MurderMethod method;
+    private static class Corpse extends NPCharacter {
+        protected final TimeOfDeath tod;
+        protected final MurderMethod method;
 
         public Corpse() {
-            this.race = Race.values()[rng.nextInt(Race.values().length)];
-            this.job = Occupation.values()[rng.nextInt(Occupation.values().length)];
-            this.age = Age.values()[rng.nextInt(Age.values().length)];
+            super(0);
             this.tod = TimeOfDeath.values()[rng.nextInt(TimeOfDeath.values().length)];
             this.method = MurderMethod.values()[rng.nextInt(MurderMethod.values().length)];
         }
@@ -403,15 +403,6 @@ public class Main {
         }
         public MurderMethod getMethod() {
             return method;
-        }
-        public Race getRace() {
-            return race;
-        }
-        public Occupation getJob() {
-            return job;
-        }
-        public Age getAge() {
-            return age;
         }
     }
 
@@ -428,7 +419,7 @@ public class Main {
             this.end = end;
         }
         public boolean containsHour(int hour) {
-            return this.start <= hour || hour <= this.end;
+            return this.start <= hour && hour <= this.end;
         }
     }
 
@@ -529,31 +520,46 @@ public class Main {
     }
 
     private static class NPCharacter {
-        private final MurderWeapon holdingWeapon;
-        private final Race race;
-        private final Age age;
-        private final SocialClass socClass;
-        private final Occupation job;
+        protected int degreesOfSep;
+        protected Race race;
+        protected Age age;
+        protected SocialClass socialClass;
+        protected Occupation job;
+        protected ArrayList<NPCharacter> known;
         private final ArrayList<Quirk> quirks;
+        private final MurderWeapon holdingWeapon;
 
-        public NPCharacter(MurderWeapon weapon) {
+        public NPCharacter(MurderWeapon weapon, int degreesOfSep) {
             this.holdingWeapon = weapon;
+            this.degreesOfSep = degreesOfSep;
             this.race = Race.values()[rng.nextInt(Race.values().length)];
             this.age = Age.values()[rng.nextInt(Age.values().length)];
-            this.socClass = SocialClass.values()[rng.nextInt(SocialClass.values().length)];
+            this.socialClass = SocialClass.values()[rng.nextInt(SocialClass.values().length)];
             this.job = Occupation.values()[rng.nextInt(Occupation.values().length)];
             this.quirks = new ArrayList<>(){{
-                for (int i = 0; i < rng.nextInt(3); i++) {
+                int quirkLimit = rng.nextInt(2);
+                for (int i = 0; i <= quirkLimit; i++) {
                     this.add(Quirk.values()[rng.nextInt(Quirk.values().length)]);
                 }
             }};
+            this.known = new ArrayList<>(){{
+                if (degreesOfSep <= 5) {
+                    int knownLimit = rng.nextInt(5);
+                    for (int i = 0; i <= knownLimit; i++) {
+                        this.add(new NPCharacter(degreesOfSep + 1));
+                    }
+                }
+            }};
         }
-        public NPCharacter() {
-            this(null);
+        public NPCharacter(int degreesOfSep) {
+            this(null, degreesOfSep);
         }
 
         public MurderWeapon getHoldingWeapon() {
             return holdingWeapon;
+        }
+        public int getDegreesOfSep() {
+            return degreesOfSep;
         }
         public Race getRace() {
             return race;
@@ -561,8 +567,8 @@ public class Main {
         public Age getAge() {
             return age;
         }
-        public SocialClass getSocClass() {
-            return socClass;
+        public SocialClass getSocialClass() {
+            return socialClass;
         }
         public Occupation getJob() {
             return job;
