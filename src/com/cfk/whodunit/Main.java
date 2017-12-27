@@ -300,26 +300,22 @@ public class Main {
 
         CrimeScene(){
             this.victim = new Corpse();
-            // TODO: iterate recursively through corpse's knowns and knowns of knowns etc, add2set
-            // TODO: set killer as random select from set of characters
-            // TODO: by adding to a random character's set of knowns! getDegreesOfSep to maintain parity
-			/*
-			NPCharacter killer = new NPCharacter(new MurderWeapon(victim.getMethod()));
-			this.suspects = new ArrayList<>(){{
-				this.add(killer);
-				for (int i = 0; i < 9; i++) {
-					this.add(new NPCharacter());
-				}
-			}};
+            groupSuspects(this.victim);
+            NPCharacter killer = this.suspects.get(rng.nextInt(this.getSuspects().size()));
+            killer.setHoldingWeapon(new MurderWeapon(this.victim.getMethod()));
 			this.allClues = new ArrayList<>(){{
 				this.add(new Clue(killer.getRace().getFootprintSize() + " footprints",10, EMPTY_HASH));
-				// add all killer clues
-				// select between x and y suspects and add between p and q clues from each
+				// TODO: add all killer clues
+				// TODO: select between x and y suspects and add between p and q clues from each
 			}};
-			*/
+
             Collections.shuffle(suspects);
         }
-
+        private void groupSuspects(NPCharacter npc) {
+            if (npc.getKnown().isEmpty()) { return; }
+            npc.getKnown().forEach(nnpc -> groupSuspects(nnpc));
+            this.suspects.add(npc);
+        }
         public Corpse getVictim() {
             return victim;
         }
@@ -421,6 +417,10 @@ public class Main {
         public boolean containsHour(int hour) {
             return this.start <= hour && hour <= this.end;
         }
+        @Override
+        public String toString() {
+            return this.name().toLowerCase().replaceFirst("_"," ");
+        }
     }
 
     private enum MurderMethod {
@@ -487,7 +487,6 @@ public class Main {
             this.put("BURN",new ArrayList<>(){{
                 this.add("a wand of Burning Hands");
                 this.add("a wand of Scorching Ray");
-
             }});
             this.put("SHOCK",new ArrayList<>(){{
                 this.add("a wand of Shocking Grasp");
@@ -527,17 +526,17 @@ public class Main {
         protected Occupation job;
         protected ArrayList<NPCharacter> known;
         private final ArrayList<Quirk> quirks;
-        private final MurderWeapon holdingWeapon;
+        private MurderWeapon holdingWeapon;
 
         public NPCharacter(MurderWeapon weapon, int degreesOfSep) {
             this.holdingWeapon = weapon;
             this.degreesOfSep = degreesOfSep;
             this.race = Race.values()[rng.nextInt(Race.values().length)];
             this.age = Age.values()[rng.nextInt(Age.values().length)];
-            this.socialClass = SocialClass.values()[rng.nextInt(SocialClass.values().length)];
+            this.socialClass = SocialClass.getWeighted();
             this.job = Occupation.values()[rng.nextInt(Occupation.values().length)];
             this.quirks = new ArrayList<>(){{
-                int quirkLimit = rng.nextInt(2);
+                int quirkLimit = rng.nextInt(3);
                 for (int i = 0; i <= quirkLimit; i++) {
                     this.add(Quirk.values()[rng.nextInt(Quirk.values().length)]);
                 }
@@ -555,6 +554,9 @@ public class Main {
             this(null, degreesOfSep);
         }
 
+        protected void setHoldingWeapon(MurderWeapon weapon) {
+            this.holdingWeapon = weapon;
+        }
         public MurderWeapon getHoldingWeapon() {
             return holdingWeapon;
         }
@@ -575,6 +577,9 @@ public class Main {
         }
         public ArrayList<Quirk> getQuirks() {
             return quirks;
+        }
+        public ArrayList<NPCharacter> getKnown() {
+            return known;
         }
     }
 
@@ -607,8 +612,31 @@ public class Main {
         }
     }
 
-    private enum SocialClass {
-        LOWER,MIDDLE,UPPER
+    private enum SocialClass {                                              // sums to 1.0
+        POOR(0.3), WORKING(0.54),                                           // sums to 0.84
+        MIDDLE_CIVIL(0.05), MIDDLE_MERCHANT(0.05), MIDDLE_MILITARY(0.05),   // sums to 0.15
+        UPPER_SOCIALITE(0.002), UPPER_MERCHANT(0.005),                      // sums to 0.007
+        NOBLE(0.0027), BURGHER(0.0003);                                     // sums to 0.003
+
+        private double weight;
+
+        SocialClass(double weight) {
+            this.weight = weight;
+        }
+
+        public static SocialClass getWeighted() {
+            // thx stackoverflow
+            int randIndex = -1;
+            double rand = rng.nextDouble();
+            for (int i = 0; i < values().length; i++) {
+                rand -= values()[i].weight;
+                if (rand <= 0.0d) {
+                    randIndex = i;
+                    break;
+                }
+            }
+            return values()[randIndex];
+        }
     }
 
     private enum Occupation {
@@ -663,7 +691,7 @@ public class Main {
     }
 }
 
-/**
+/*
  * alg:
  * set of x characters
  *  set of properties
